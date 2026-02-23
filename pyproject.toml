@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kf-agent"
+version = "0.1.1"
+description = "客服软件操控服务：通过 HTTP API 控制千牛、小红书、抖音等客服软件的打开、上线与关闭，流程可配置、可可视化编辑。"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = []
+keywords = ["rpa", "customer-service", "automation", "fastapi"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business",
+]
+
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "pywinauto>=0.6.8",
+    "opencv-python-headless>=4.9.0",
+    "pillow>=10.0.0",
+    "pyautogui>=0.9.54",
+    "psutil>=5.9.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "httpx"]
+
+[project.scripts]
+kf-agent = "kf_agent.main:run"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["kf_agent*"]
+
+[tool.setuptools.package-data]
+kf_agent = ["static/**/*"]

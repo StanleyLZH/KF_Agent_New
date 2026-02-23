@@ -1,0 +1,42 @@
+{
+  "platform": "douyin",
+  "display_name": "抖音客服",
+  "open": [
+    {
+      "type": "launch",
+      "path": "C:\\Program Files\\Douyin\\抖音客服.exe"
+    },
+    {
+      "type": "wait_window",
+      "title": "抖音",
+      "timeout_seconds": 30.0
+    },
+    {
+      "type": "wait",
+      "seconds": 3
+    },
+    {
+      "type": "click",
+      "element": {
+        "image": "douyin_online_btn.png"
+      }
+    }
+  ],
+  "close": [
+    {
+      "type": "click",
+      "element": {
+        "image": "douyin_offline_btn.png"
+      }
+    },
+    {
+      "type": "wait",
+      "seconds": 1
+    },
+    {
+      "type": "close_window",
+      "title": "抖音",
+      "kill_process": false
+    }
+  ]
+}

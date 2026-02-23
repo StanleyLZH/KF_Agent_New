@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>流程编辑器</title>
+  <link rel="stylesheet" href="/static/editor/editor.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <h1>流程编辑器</h1>
+      <div class="platform-bar">
+        <label>平台</label>
+        <select id="platformSelect" aria-label="选择平台">
+          <option value="">-- 选择平台 --</option>
+        </select>
+        <button type="button" id="btnNewPlatform">新建平台</button>
+        <input type="text" id="newPlatformId" placeholder="平台 ID" class="hidden" />
+        <input type="text" id="newDisplayName" placeholder="展示名称" class="hidden" />
+        <button type="button" id="btnConfirmNew" class="hidden">确认新建</button>
+        <button type="button" id="btnCancelNew" class="hidden">取消</button>
+        <span id="platformDisplayName" class="display-name"></span>
+        <label class="display-name-edit hidden" id="displayNameEdit">
+          <input type="text" id="displayNameInput" placeholder="展示名称（可选）" />
+        </label>
+        <button type="button" id="btnSave" disabled>保存</button>
+        <button type="button" id="btnDeletePlatform" disabled title="删除当前平台">删除平台</button>
+      </div>
+    </header>
+
+    <div id="toast" class="toast hidden" role="alert"></div>
+
+    <main class="main">
+      <section class="flow-section">
+        <h2>打开流程</h2>
+        <div class="step-list" id="openStepList" data-flow="open"></div>
+        <button type="button" class="add-step" id="btnAddOpen">+ 添加步骤</button>
+      </section>
+      <section class="flow-section">
+        <h2>关闭流程</h2>
+        <div class="step-list" id="closeStepList" data-flow="close"></div>
+        <button type="button" class="add-step" id="btnAddClose">+ 添加步骤</button>
+      </section>
+
+      <aside class="step-editor-panel" id="stepEditorPanel">
+        <h3>编辑步骤</h3>
+        <div id="stepEditorContent" class="step-editor-content"></div>
+      </aside>
+    </main>
+
+    <div id="stepTypeModal" class="modal hidden">
+      <div class="modal-content">
+        <h3>选择步骤类型</h3>
+        <div class="step-type-grid" id="stepTypeGrid"></div>
+        <button type="button" class="modal-close" id="btnCloseTypeModal">取消</button>
+      </div>
+    </div>
+  </div>
+  <script src="/static/editor/editor.js"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+{
+  "platform": "xiaohongshu",
+  "display_name": "小红书客服",
+  "open": [
+    {
+      "type": "launch",
+      "path": "C:\\Program Files\\Xiaohongshu\\客服工作台.exe"
+    },
+    {
+      "type": "wait_window",
+      "title": "小红书",
+      "timeout_seconds": 30.0
+    },
+    {
+      "type": "wait",
+      "seconds": 3
+    },
+    {
+      "type": "click",
+      "element": {
+        "image": "xiaohongshu_online_btn.png"
+      }
+    }
+  ],
+  "close": [
+    {
+      "type": "click",
+      "element": {
+        "image": "xiaohongshu_offline_btn.png"
+      }
+    },
+    {
+      "type": "wait",
+      "seconds": 1
+    },
+    {
+      "type": "close_window",
+      "title": "小红书",
+      "kill_process": false
+    }
+  ]
+}

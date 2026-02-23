@@ -1,0 +1,18 @@
+# Web
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+
+# Windows UI automation (optional on non-Windows)
+pywinauto>=0.6.8
+
+# Image matching & screen
+opencv-python-headless>=4.9.0
+pillow>=10.0.0
+pyautogui>=0.9.54
+
+# Process & system
+psutil>=5.9.0
+
+# Config & validation
+pydantic>=2.5.0
+pydantic-settings>=2.1.0

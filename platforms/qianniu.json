@@ -1,0 +1,54 @@
+{
+  "platform": "qianniu",
+  "open": [
+    {
+      "type": "launch",
+      "path": "C:\\Program Files (x86)\\AliWorkbench\\千牛.exe"
+    },
+    {
+      "type": "wait_window",
+      "title": "千牛",
+      "timeout_seconds": 30
+    },
+    {
+      "type": "wait",
+      "seconds": 3
+    },
+    {
+      "type": "click",
+      "element": {
+        "image": null,
+        "control": {},
+        "coord": null
+      }
+    },
+    {
+      "type": "wait",
+      "seconds": 2
+    },
+    {
+      "type": "click",
+      "element": {
+        "image": "qianniu_online_btn.png"
+      }
+    }
+  ],
+  "close": [
+    {
+      "type": "click",
+      "element": {
+        "image": "qianniu_offline_btn.png"
+      }
+    },
+    {
+      "type": "wait",
+      "seconds": 1
+    },
+    {
+      "type": "close_window",
+      "title": "千牛",
+      "kill_process": false
+    }
+  ],
+  "display_name": "千牛"
+}
