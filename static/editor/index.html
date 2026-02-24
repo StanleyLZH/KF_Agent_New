@@ -56,6 +56,20 @@
         <button type="button" class="modal-close" id="btnCloseTypeModal">取消</button>
       </div>
     </div>
+
+    <div id="launchFilePickerModal" class="modal hidden">
+      <div class="modal-content modal-content--file-picker">
+        <h3>选择服务器上的可执行文件</h3>
+        <div class="file-picker-path" id="filePickerPath"></div>
+        <div class="file-picker-toolbar">
+          <button type="button" class="btn-secondary" id="filePickerParent">上级目录</button>
+        </div>
+        <div class="file-picker-list" id="filePickerList"></div>
+        <div class="file-picker-actions">
+          <button type="button" class="modal-close" id="btnCloseLaunchFilePicker">取消</button>
+        </div>
+      </div>
+    </div>
   </div>
   <script src="/static/editor/editor.js"></script>
 </body>

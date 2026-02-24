@@ -66,6 +66,9 @@
     config: null,
     selectedStep: null,
     addingToFlow: null,
+    filePickerStep: null,
+    filePickerPathInput: null,
+    filePickerCurrentPath: null,
   };
 
   function getEl(id) {
@@ -80,6 +83,98 @@
     setTimeout(function () {
       el.classList.add('hidden');
     }, 3000);
+  }
+
+  function openLaunchFilePicker(step, pathInput) {
+    state.filePickerStep = step;
+    state.filePickerPathInput = pathInput;
+    state.filePickerCurrentPath = null;
+    getEl('filePickerParent').disabled = true;
+    getEl('launchFilePickerModal').classList.remove('hidden');
+    getEl('filePickerPath').textContent = '根目录';
+    getEl('filePickerList').innerHTML = '<div class="file-picker-loading">加载中…</div>';
+    loadFilePickerList(null);
+  }
+
+  function closeLaunchFilePicker() {
+    getEl('launchFilePickerModal').classList.add('hidden');
+    state.filePickerStep = null;
+    state.filePickerPathInput = null;
+    state.filePickerCurrentPath = null;
+  }
+
+  function loadFilePickerList(path) {
+    const q = path ? '?path=' + encodeURIComponent(path) : '';
+    fetch(API_BASE + '/config/list-dir' + q)
+      .then(function (r) {
+        if (!r.ok) return r.json().then(function (d) { throw new Error(d.detail || r.statusText); });
+        return r.json();
+      })
+      .then(function (data) {
+        state.filePickerCurrentPath = path || null;
+        getEl('filePickerParent').disabled = !path;
+        if (data.roots) {
+          getEl('filePickerPath').textContent = '根目录';
+          renderFilePickerList(data.roots, true);
+        } else {
+          getEl('filePickerPath').textContent = data.current || path || '';
+          renderFilePickerList(data.entries || [], false);
+        }
+      })
+      .catch(function (e) {
+        getEl('filePickerList').innerHTML = '<div class="file-picker-loading file-picker-error">' + escapeHtml(e.message || String(e)) + '</div>';
+      });
+  }
+
+  function renderFilePickerList(entries, isRoots) {
+    const listEl = getEl('filePickerList');
+    const step = state.filePickerStep;
+    const pathInput = state.filePickerPathInput;
+    if (!entries || entries.length === 0) {
+      listEl.innerHTML = '<div class="file-picker-loading">（空）</div>';
+      return;
+    }
+    listEl.innerHTML = entries.map(function (entry) {
+      const cls = entry.is_dir ? 'folder' : (entry.name.toLowerCase().match(/\.(exe|bat|cmd)$/) ? 'executable' : '');
+      return '<div class="file-picker-item ' + cls + '" data-path="' + escapeHtml(entry.path) + '" data-isdir="' + (entry.is_dir ? '1' : '0') + '">' + escapeHtml(entry.name) + '</div>';
+    }).join('');
+    listEl.querySelectorAll('.file-picker-item').forEach(function (el) {
+      el.addEventListener('click', function () {
+        const path = el.getAttribute('data-path');
+        const isDir = el.getAttribute('data-isdir') === '1';
+        if (isDir) {
+          loadFilePickerList(path);
+        } else {
+          if (step) step.path = path;
+          if (pathInput) pathInput.value = path;
+          updateStepListSummaries();
+          showToast('已选择: ' + (path || '').split(/[/\\]/).pop());
+          closeLaunchFilePicker();
+        }
+      });
+    });
+  }
+
+  function filePickerGoParent() {
+    const cur = state.filePickerCurrentPath;
+    if (!cur) return;
+    var parentPath;
+    if (cur.match(/^[A-Za-z]:\\?$/)) {
+      parentPath = null;
+    } else if (cur === '/' || cur === '') {
+      parentPath = null;
+    } else {
+      var parts = cur.replace(/\\/g, '/').split('/').filter(Boolean);
+      if (parts.length <= 1) {
+        if (cur.indexOf('\\') >= 0) parentPath = parts[0] + '\\';
+        else parentPath = '/';
+      } else {
+        parts.pop();
+        parentPath = cur.indexOf('\\') >= 0 ? parts.join('\\') : '/' + parts.join('/');
+      }
+    }
+    if (parentPath === undefined) parentPath = null;
+    loadFilePickerList(parentPath);
   }
 
   function setPlatformSelectOptions() {
@@ -211,10 +306,9 @@
     if (type === 'launch') {
       html +=
         '<div class="form-group"><label>路径 (path)</label>' +
-        '<p class="field-hint">已安装软件请直接填写本机路径（如 C:\\Program Files (x86)\\AliWorkbench\\千牛.exe）；「选择文件」会上传到服务器并改用上传后的路径。</p>' +
+        '<p class="field-hint">可填写服务器本机路径（如 C:\\Program Files (x86)\\AliWorkbench\\千牛.exe），或点击「选择服务器文件」从服务器磁盘中选取。</p>' +
         '<div class="path-row"><input type="text" data-field="path" value="' + escapeHtml(step.path || '') + '" placeholder="可执行文件完整路径" />' +
-        '<button type="button" class="btn-choose-file" data-action="launch-choose-file">选择文件（上传）</button>' +
-        '<input type="file" class="hidden launch-file-input" accept=".exe,.bat,.cmd" data-action="launch-file-input" /></div></div>' +
+        '<button type="button" class="btn-choose-file" data-action="launch-choose-file">选择服务器文件</button></div></div>' +
         '<div class="form-group"><label>参数 args (逗号分隔)</label><input type="text" data-field="args" value="' + escapeHtml(Array.isArray(step.args) ? step.args.join(', ') : '') + '" placeholder="可选" /></div>' +
         '<div class="form-group"><label>工作目录 (cwd)</label><input type="text" data-field="cwd" value="' + escapeHtml(step.cwd || '') + '" placeholder="建议与 path 所在目录一致，如 C:\\Program Files (x86)\\AliWorkbench" /></div>';
     } else if (type === 'wait_window') {
@@ -274,12 +368,12 @@
       '<div class="form-row"><label>threshold</label><input type="number" data-elem="image.threshold" step="0.01" value="' + thresh + '" /></div>' +
       '<div class="form-row"><button type="button" class="btn-pick-image" data-action="image-choose-file">选择图片文件</button><input type="file" class="hidden image-file-input" accept="image/*" data-action="image-file-input" /></div>' +
       '<div class="form-row"><button type="button" class="btn-capture-window" data-action="image-capture-window">从当前窗口截取</button></div>' +
-      '<p class="form-hint">请先切换到目标窗口，再点击上方按钮（仅 Windows）</p>' +
+      '<p class="form-hint">点击后本窗口会最小化，请切换到目标窗口后按 <strong>Ctrl+Shift+R</strong> 开始框选，再按住 <strong>Ctrl</strong> 拖动鼠标框选区域，松开即保存；Esc 取消（仅 Windows）</p>' +
       (imgVal ? '<div class="form-row image-preview"><img src="' + (imgVal.indexOf("/") >= 0 ? imgVal : (API_BASE + "/config/templates/" + encodeURIComponent(imgVal))) + '" alt="预览" onerror="this.style.display=\'none\'" /></div>' : '') +
       '</div>' +
       '<div class="element-panel" data-panel="control" style="' + (hasControl ? '' : 'display:none') + '">' +
-      '<div class="form-row"><button type="button" class="btn-pick-control" data-action="pick-control">从当前鼠标位置捕获控件</button></div>' +
-      '<p class="form-hint">请先将鼠标移到目标控件上，再点击上方按钮（仅 Windows）</p>' +
+      '<div class="form-row"><button type="button" class="btn-pick-control" data-action="pick-control">开始捕获</button></div>' +
+      '<p class="form-hint">点击后请最小化本窗口，将鼠标移到目标控件上会显示红框，按 <strong>Ctrl+Shift+C</strong> 捕获（仅 Windows）</p>' +
       '<div class="form-row"><label>window_title</label><input type="text" data-elem="control.window_title" value="' + escapeHtml(c.window_title || '') + '" /></div>' +
       '<div class="form-row"><label>window_class</label><input type="text" data-elem="control.window_class" value="' + escapeHtml(c.window_class || '') + '" /></div>' +
       '<div class="form-row"><label>control_id</label><input type="number" data-elem="control.control_id" value="' + (c.control_id ?? '') + '" /></div>' +
@@ -366,23 +460,9 @@
 
     var pathInput = content.querySelector('input[data-field="path"]');
     var launchBtn = content.querySelector('[data-action="launch-choose-file"]');
-    var launchFile = content.querySelector('.launch-file-input');
-    if (launchBtn && launchFile && pathInput) {
-      launchBtn.addEventListener('click', function () { launchFile.click(); });
-      launchFile.addEventListener('change', function () {
-        if (!launchFile.files || !launchFile.files[0]) return;
-        var fd = new FormData();
-        fd.append('file', launchFile.files[0]);
-        fetch(API_BASE + '/config/upload-file', { method: 'POST', body: fd })
-          .then(function (r) { return r.json(); })
-          .then(function (data) {
-            step.path = data.path;
-            pathInput.value = data.path;
-            updateStepListSummaries();
-            showToast('已选择: ' + (data.path || '').split(/[/\\]/).pop());
-          })
-          .catch(function (e) { showToast('上传失败: ' + (e.message || String(e)), true); });
-        launchFile.value = '';
+    if (launchBtn && pathInput) {
+      launchBtn.addEventListener('click', function () {
+        openLaunchFilePicker(step, pathInput);
       });
     }
 
@@ -392,20 +472,22 @@
         var btn = this;
         var origText = btn.textContent;
         btn.disabled = true;
-        var sec = 3;
-        btn.textContent = sec + ' 秒后捕获…';
-        var t = setInterval(function () {
-          sec--;
-          if (sec <= 0) {
-            clearInterval(t);
-            btn.textContent = origText;
-            btn.disabled = false;
-            fetch(API_BASE + '/config/pick-control')
+        btn.textContent = '捕获中…';
+        showToast('请最小化本窗口，将鼠标移到目标控件上，按 Ctrl+Shift+C 捕获');
+        if (typeof window.minimize === 'function') window.minimize();
+        else if (window.blur) window.blur();
+        fetch(API_BASE + '/config/pick-control/capture', { method: 'POST' })
           .then(function (r) {
             if (!r.ok) return r.json().then(function (d) { throw new Error(d.detail || r.statusText); });
             return r.json();
           })
           .then(function (data) {
+            btn.textContent = origText;
+            btn.disabled = false;
+            if (data && data.captured === false) {
+              showToast(data.detail === 'timeout_or_no_control' ? '未捕获到控件（超时或未按 Ctrl+Shift+C）' : '未捕获到控件', true);
+              return;
+            }
             if (!step.element) step.element = {};
             step.element.control = {
               window_title: data.window_title || null,
@@ -421,13 +503,10 @@
             showToast('控件已捕获');
           })
           .catch(function (e) {
+            btn.textContent = origText;
+            btn.disabled = false;
             showToast(e.message || '捕获失败（仅 Windows 支持）', true);
           });
-            return;
-          }
-          btn.textContent = sec + ' 秒后捕获…';
-        }, 1000);
-        showToast('请将鼠标移到目标控件上');
       });
     }
 
@@ -458,12 +537,21 @@
     var captureBtn = content.querySelector('[data-action="image-capture-window"]');
     if (captureBtn) {
       captureBtn.addEventListener('click', function () {
-        fetch(API_BASE + '/config/capture-window', { method: 'POST' })
+        var btn = this;
+        var origText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '截取中…';
+        showToast('本窗口将最小化，请切换到目标窗口后按 Ctrl+Shift+R 开始框选');
+        if (typeof window.minimize === 'function') window.minimize();
+        else if (window.blur) window.blur();
+        fetch(API_BASE + '/config/capture-region', { method: 'POST' })
           .then(function (r) {
             if (!r.ok) return r.json().then(function (d) { throw new Error(d.detail || r.statusText); });
             return r.json();
           })
           .then(function (data) {
+            btn.textContent = origText;
+            btn.disabled = false;
             if (!step.element) step.element = {};
             if (!step.element.image) step.element.image = { image: '', threshold: 0.8 };
             step.element.image.image = data.filename;
@@ -472,7 +560,11 @@
             render();
             showToast('已截取: ' + data.filename);
           })
-          .catch(function (e) { showToast(e.message || '截取失败（仅 Windows 支持）', true); });
+          .catch(function (e) {
+            btn.textContent = origText;
+            btn.disabled = false;
+            showToast(e.message || '截取失败（仅 Windows 支持）', true);
+          });
       });
     }
   }
@@ -673,6 +765,11 @@
     getEl('btnCloseTypeModal').addEventListener('click', function () {
       getEl('stepTypeModal').classList.add('hidden');
       state.addingToFlow = null;
+    });
+
+    getEl('btnCloseLaunchFilePicker').addEventListener('click', closeLaunchFilePicker);
+    getEl('filePickerParent').addEventListener('click', function () {
+      if (!this.disabled) filePickerGoParent();
     });
 
     getEl('openStepList').addEventListener('click', delegateStepList);

@@ -3,6 +3,7 @@ fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
 
 # Windows UI automation (optional on non-Windows)
+comtypes>=1.1.7
 pywinauto>=0.6.8
 
 # Image matching & screen

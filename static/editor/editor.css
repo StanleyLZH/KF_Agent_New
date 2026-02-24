@@ -445,3 +445,87 @@ body {
 .modal-close:hover {
   background: #f0f0f0;
 }
+
+/* ----- Launch file picker (server-side) ----- */
+.modal-content--file-picker {
+  max-width: 520px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.file-picker-path {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 8px;
+  word-break: break-all;
+}
+
+.file-picker-toolbar {
+  margin-bottom: 8px;
+}
+
+.file-picker-toolbar .btn-secondary {
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.file-picker-toolbar .btn-secondary:hover {
+  background: #f1f5f9;
+}
+
+.file-picker-list {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow: auto;
+  min-height: 200px;
+  max-height: 320px;
+  margin-bottom: 12px;
+}
+
+.file-picker-list .file-picker-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.file-picker-list .file-picker-item:last-child {
+  border-bottom: none;
+}
+
+.file-picker-list .file-picker-item:hover {
+  background: #f1f5f9;
+}
+
+.file-picker-list .file-picker-item.folder::before {
+  content: '[目录] ';
+  color: #64748b;
+  margin-right: 4px;
+}
+
+.file-picker-list .file-picker-item.executable {
+  font-weight: 500;
+}
+
+.file-picker-list .file-picker-loading,
+.file-picker-list .file-picker-error {
+  padding: 16px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.file-picker-list .file-picker-error {
+  color: #b91c1c;
+}
+
+.file-picker-actions {
+  display: flex;
+  justify-content: flex-end;
+}

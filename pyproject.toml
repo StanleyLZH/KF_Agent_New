@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kf-agent"
-version = "0.1.1"
+version = "0.1.20"
 description = "客服软件操控服务：通过 HTTP API 控制千牛、小红书、抖音等客服软件的打开、上线与关闭，流程可配置、可可视化编辑。"
 readme = "README.md"
 license = "MIT"
@@ -23,6 +23,7 @@ classifiers = [
 dependencies = [
     "fastapi>=0.109.0",
     "uvicorn[standard]>=0.27.0",
+    "comtypes>=1.1.7",
     "pywinauto>=0.6.8",
     "opencv-python-headless>=4.9.0",
     "pillow>=10.0.0",

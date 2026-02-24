@@ -40,6 +40,8 @@ elif [ -d "venv" ]; then
   source ./venv/bin/activate
 fi
 
+# 构建前清空 dist，避免上传历史版本并减少 "Skipping" 提示
+rm -rf "$DIST_DIR"
 echo "Building..."
 python -m build
 if [ $? -ne 0 ]; then
