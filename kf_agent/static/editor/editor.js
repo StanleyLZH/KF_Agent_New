@@ -69,6 +69,10 @@
     filePickerStep: null,
     filePickerPathInput: null,
     filePickerCurrentPath: null,
+    resources: {
+      controls: [],
+      images: [],
+    },
   };
 
   function getEl(id) {
@@ -83,6 +87,17 @@
     setTimeout(function () {
       el.classList.add('hidden');
     }, 3000);
+  }
+
+  function requestJson(url, options) {
+    return fetch(url, options).then(function (r) {
+      if (!r.ok) {
+        return r.json()
+          .catch(function () { return { detail: r.statusText }; })
+          .then(function (d) { throw new Error(d.detail || r.statusText || '请求失败'); });
+      }
+      return r.json();
+    });
   }
 
   function openLaunchFilePicker(step, pathInput) {
@@ -216,13 +231,7 @@
   }
 
   function loadConfig(platformId) {
-    return fetch(API_BASE + '/config/platforms/' + encodeURIComponent(platformId))
-      .then(function (r) {
-        if (r.status === 404) {
-          throw new Error('平台不存在');
-        }
-        return r.json();
-      })
+    return requestJson(API_BASE + '/config/platforms/' + encodeURIComponent(platformId))
       .then(function (data) {
         state.config = {
           platform: data.platform || platformId,
@@ -237,9 +246,25 @@
         getEl('displayNameInput').value = state.config.display_name || '';
         getEl('displayNameEdit').classList.remove('hidden');
         getEl('btnDeletePlatform').disabled = false;
+        return loadResources(platformId);
       })
       .catch(function (err) {
         showToast('加载配置失败: ' + err.message, true);
+      });
+  }
+
+  function loadResources(platformId) {
+    return requestJson(API_BASE + '/config/platforms/' + encodeURIComponent(platformId) + '/resources')
+      .then(function (data) {
+        state.resources.controls = Array.isArray(data.controls) ? data.controls : [];
+        state.resources.images = Array.isArray(data.images) ? data.images : [];
+        render();
+      })
+      .catch(function (err) {
+        state.resources.controls = [];
+        state.resources.images = [];
+        render();
+        showToast('加载资源库失败: ' + err.message, true);
       });
   }
 
@@ -278,6 +303,7 @@
       getEl('closeStepList').innerHTML = '';
       getEl('stepEditorPanel').classList.add('empty');
       getEl('stepEditorContent').innerHTML = '<p>请选择或新建平台</p>';
+      renderResourcePanel();
       return;
     }
     getEl('stepEditorPanel').classList.remove('empty');
@@ -288,6 +314,54 @@
     } else {
       getEl('stepEditorContent').innerHTML = '<p>点击步骤「编辑」或添加新步骤</p>';
     }
+    renderResourcePanel();
+  }
+
+  function renderResourcePanel() {
+    const hint = getEl('resourcePanelHint');
+    const content = getEl('resourcePanelContent');
+    if (!state.config) {
+      hint.textContent = '请选择平台后管理资源。';
+      content.classList.add('hidden');
+      getEl('resourceControlList').innerHTML = '';
+      getEl('resourceImageList').innerHTML = '';
+      return;
+    }
+    hint.textContent = '当前平台：' + state.config.platform;
+    content.classList.remove('hidden');
+    renderResourceList('controls');
+    renderResourceList('images');
+  }
+
+  function renderResourceList(type) {
+    const listEl = getEl(type === 'controls' ? 'resourceControlList' : 'resourceImageList');
+    const list = type === 'controls' ? state.resources.controls : state.resources.images;
+    if (!list.length) {
+      listEl.innerHTML = '<div class="resource-item"><div class="resource-item-sub">暂无资源</div></div>';
+      return;
+    }
+    listEl.innerHTML = list.map(function (item) {
+      var sub = '';
+      if (type === 'controls') {
+        var c = item.payload || {};
+        sub = [c.window_title, c.control_type, c.name].filter(Boolean).join(' / ') || '控件信息';
+      } else {
+        var img = item.payload || {};
+        sub = (img.image || '图片') + '，阈值 ' + (img.threshold != null ? img.threshold : 0.8);
+      }
+      return (
+        '<div class="resource-item" data-res-type="' + type + '" data-res-id="' + escapeHtml(item.id) + '">' +
+        '<div class="resource-item-title">' + escapeHtml(item.name || item.id) + '</div>' +
+        '<div class="resource-item-sub">' + escapeHtml(sub) + '</div>' +
+        '<div class="resource-item-actions">' +
+        '<button type="button" data-action="resource-use">用于当前步骤</button>' +
+        '<button type="button" data-action="resource-locate">定位</button>' +
+        '<button type="button" data-action="resource-rename">重命名</button>' +
+        '<button type="button" data-action="resource-delete">删除</button>' +
+        '</div>' +
+        '</div>'
+      );
+    }).join('');
   }
 
   function getStep(flow, index) {
@@ -349,6 +423,12 @@
     const thresh = (el.image && typeof el.image === 'object' && el.image.threshold != null) ? el.image.threshold : 0.8;
     const c = el.control || {};
     const coord = el.coord || {};
+    const controlOptions = state.resources.controls.map(function (item) {
+      return '<option value="' + escapeHtml(item.id) + '">' + escapeHtml(item.name || item.id) + '</option>';
+    }).join('');
+    const imageOptions = state.resources.images.map(function (item) {
+      return '<option value="' + escapeHtml(item.id) + '">' + escapeHtml(item.name || item.id) + '</option>';
+    }).join('');
     return (
       '<div class="form-group element-editor" data-step-type="' + stepType + '">' +
       '<label>元素定位</label>' +
@@ -364,6 +444,7 @@
       '<div class="form-row"><label>window_title</label><input type="text" data-elem="coord.window_title" value="' + escapeHtml(coord.window_title || '') + '" /></div>' +
       '</div>' +
       '<div class="element-panel" data-panel="image" style="' + (hasImage ? '' : 'display:none') + '">' +
+      '<div class="resource-select-row"><select data-resource-select="image"><option value="">从资源库选择图片...</option>' + imageOptions + '</select><button type="button" data-action="apply-image-resource">使用</button></div>' +
       '<div class="form-row"><label>image</label><input type="text" data-elem="image.image" value="' + escapeHtml(imgVal) + '" placeholder="文件名或路径" /></div>' +
       '<div class="form-row"><label>threshold</label><input type="number" data-elem="image.threshold" step="0.01" value="' + thresh + '" /></div>' +
       '<div class="form-row"><button type="button" class="btn-pick-image" data-action="image-choose-file">选择图片文件</button><input type="file" class="hidden image-file-input" accept="image/*" data-action="image-file-input" /></div>' +
@@ -372,6 +453,7 @@
       (imgVal ? '<div class="form-row image-preview"><img src="' + (imgVal.indexOf("/") >= 0 ? imgVal : (API_BASE + "/config/templates/" + encodeURIComponent(imgVal))) + '" alt="预览" onerror="this.style.display=\'none\'" /></div>' : '') +
       '</div>' +
       '<div class="element-panel" data-panel="control" style="' + (hasControl ? '' : 'display:none') + '">' +
+      '<div class="resource-select-row"><select data-resource-select="control"><option value="">从资源库选择控件...</option>' + controlOptions + '</select><button type="button" data-action="apply-control-resource">使用</button></div>' +
       '<div class="form-row"><button type="button" class="btn-pick-control" data-action="pick-control">开始捕获</button></div>' +
       '<p class="form-hint">点击后请最小化本窗口，将鼠标移到目标控件上会显示红框，按 <strong>Ctrl+Shift+C</strong> 捕获（仅 Windows）</p>' +
       '<div class="form-row"><label>window_title</label><input type="text" data-elem="control.window_title" value="' + escapeHtml(c.window_title || '') + '" /></div>' +
@@ -510,6 +592,28 @@
       });
     }
 
+    var applyControlResourceBtn = content.querySelector('[data-action="apply-control-resource"]');
+    if (applyControlResourceBtn) {
+      applyControlResourceBtn.addEventListener('click', function () {
+        var select = content.querySelector('select[data-resource-select="control"]');
+        if (!select || !select.value) {
+          showToast('请先选择控件资源', true);
+          return;
+        }
+        var res = state.resources.controls.find(function (x) { return x.id === select.value; });
+        if (!res) {
+          showToast('控件资源不存在', true);
+          return;
+        }
+        if (!step.element) step.element = {};
+        step.element.control = Object.assign({}, res.payload || {});
+        step.element.coord = null;
+        step.element.image = null;
+        render();
+        showToast('已应用控件资源: ' + (res.name || res.id));
+      });
+    }
+
     var imageChooseBtn = content.querySelector('[data-action="image-choose-file"]');
     var imageFileInput = content.querySelector('.image-file-input');
     if (imageChooseBtn && imageFileInput) {
@@ -567,6 +671,169 @@
           });
       });
     }
+
+    var applyImageResourceBtn = content.querySelector('[data-action="apply-image-resource"]');
+    if (applyImageResourceBtn) {
+      applyImageResourceBtn.addEventListener('click', function () {
+        var select = content.querySelector('select[data-resource-select="image"]');
+        if (!select || !select.value) {
+          showToast('请先选择图片资源', true);
+          return;
+        }
+        var res = state.resources.images.find(function (x) { return x.id === select.value; });
+        if (!res) {
+          showToast('图片资源不存在', true);
+          return;
+        }
+        if (!step.element) step.element = {};
+        step.element.image = Object.assign({ threshold: 0.8 }, res.payload || {});
+        step.element.coord = null;
+        step.element.control = null;
+        render();
+        showToast('已应用图片资源: ' + (res.name || res.id));
+      });
+    }
+  }
+
+  function applyResourceToCurrentStep(type, resource) {
+    if (!state.selectedStep) {
+      showToast('请先选择一个 click 或 input_text 步骤', true);
+      return;
+    }
+    var step = getStep(state.selectedStep.flow, state.selectedStep.index);
+    if (!step || (step.type !== 'click' && step.type !== 'input_text')) {
+      showToast('当前步骤不支持元素资源', true);
+      return;
+    }
+    if (!step.element) step.element = {};
+    if (type === 'controls') {
+      step.element.control = Object.assign({}, resource.payload || {});
+      step.element.coord = null;
+      step.element.image = null;
+    } else {
+      step.element.image = Object.assign({ threshold: 0.8 }, resource.payload || {});
+      step.element.coord = null;
+      step.element.control = null;
+    }
+    render();
+    showToast('已应用到当前步骤');
+  }
+
+  function createControlResourceByCapture() {
+    if (!state.config) return;
+    showToast('请最小化本窗口，将鼠标移到目标控件上，按 Ctrl+Shift+C 捕获');
+    if (typeof window.minimize === 'function') window.minimize();
+    else if (window.blur) window.blur();
+    requestJson(API_BASE + '/config/pick-control/capture', { method: 'POST' })
+      .then(function (data) {
+        if (data && data.captured === false) {
+          throw new Error('未捕获到控件（超时或未按 Ctrl+Shift+C）');
+        }
+        var name = prompt('请输入控件资源名称', (data.name || data.control_type || '控件资源').trim());
+        if (!name) {
+          showToast('已取消新增控件资源');
+          return null;
+        }
+        return requestJson(API_BASE + '/config/platforms/' + encodeURIComponent(state.config.platform) + '/resources/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: name.trim(),
+            payload: {
+              window_title: data.window_title || null,
+              window_class: data.window_class || null,
+              control_id: data.control_id !== undefined && data.control_id !== null ? data.control_id : undefined,
+              automation_id: data.automation_id || null,
+              control_type: data.control_type || null,
+              name: data.name || null,
+            },
+          }),
+        });
+      })
+      .then(function (created) {
+        if (!created) return;
+        return loadResources(state.config.platform).then(function () {
+          showToast('控件资源已新增: ' + (created.name || created.id));
+        });
+      })
+      .catch(function (err) {
+        showToast(err.message || '新增控件资源失败', true);
+      });
+  }
+
+  function createImageResourceFromFilename(filename) {
+    if (!state.config || !filename) return Promise.resolve();
+    var name = prompt('请输入图片资源名称', filename);
+    if (!name) {
+      showToast('已取消新增图片资源');
+      return Promise.resolve();
+    }
+    return requestJson(API_BASE + '/config/platforms/' + encodeURIComponent(state.config.platform) + '/resources/images', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: name.trim(),
+        payload: { image: filename, threshold: 0.8 },
+      }),
+    }).then(function (created) {
+      return loadResources(state.config.platform).then(function () {
+        showToast('图片资源已新增: ' + (created.name || created.id));
+      });
+    });
+  }
+
+  function locateResource(type, id) {
+    if (!state.config) return;
+    requestJson(API_BASE + '/config/platforms/' + encodeURIComponent(state.config.platform) + '/resources/locate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: type === 'controls' ? 'control' : 'image',
+        resource_id: id,
+      }),
+    }).then(function () {
+      showToast('已定位并高亮');
+    }).catch(function (err) {
+      showToast(err.message || '定位失败', true);
+    });
+  }
+
+  function renameResource(type, id) {
+    if (!state.config) return;
+    var list = type === 'controls' ? state.resources.controls : state.resources.images;
+    var item = list.find(function (x) { return x.id === id; });
+    if (!item) return;
+    var name = prompt('请输入新名称', item.name || '');
+    if (!name) return;
+    requestJson(
+      API_BASE + '/config/platforms/' + encodeURIComponent(state.config.platform) + '/resources/' + type + '/' + encodeURIComponent(id) + '/name',
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() }),
+      }
+    ).then(function () {
+      return loadResources(state.config.platform);
+    }).then(function () {
+      showToast('重命名成功');
+    }).catch(function (err) {
+      showToast(err.message || '重命名失败', true);
+    });
+  }
+
+  function deleteResource(type, id) {
+    if (!state.config) return;
+    if (!confirm('确认删除该资源吗？')) return;
+    requestJson(
+      API_BASE + '/config/platforms/' + encodeURIComponent(state.config.platform) + '/resources/' + type + '/' + encodeURIComponent(id),
+      { method: 'DELETE' }
+    ).then(function () {
+      return loadResources(state.config.platform);
+    }).then(function () {
+      showToast('删除成功');
+    }).catch(function (err) {
+      showToast(err.message || '删除失败', true);
+    });
   }
 
   function updateStepListSummaries() {
@@ -676,6 +943,7 @@
       if (!id) {
         state.config = null;
         state.selectedStep = null;
+        state.resources = { controls: [], images: [] };
         render();
         getEl('btnSave').disabled = true;
         getEl('btnDeletePlatform').disabled = true;
@@ -708,6 +976,7 @@
         close: [],
       };
       state.selectedStep = null;
+      state.resources = { controls: [], images: [] };
       showNewPlatformInputs(false);
       setPlatformSelectOptions();
       var opt = document.createElement('option');
@@ -721,6 +990,7 @@
       getEl('displayNameEdit').classList.remove('hidden');
       getEl('btnDeletePlatform').disabled = false;
       render();
+      loadResources(id);
       showToast('已创建新平台配置，请添加步骤后保存');
     });
 
@@ -774,6 +1044,48 @@
 
     getEl('openStepList').addEventListener('click', delegateStepList);
     getEl('closeStepList').addEventListener('click', delegateStepList);
+    getEl('btnAddControlResource').addEventListener('click', createControlResourceByCapture);
+    getEl('btnUploadImageResource').addEventListener('click', function () {
+      if (!state.config) return;
+      getEl('resourceImageFileInput').click();
+    });
+    getEl('resourceImageFileInput').addEventListener('change', function () {
+      var input = getEl('resourceImageFileInput');
+      if (!input.files || !input.files[0] || !state.config) return;
+      var fd = new FormData();
+      fd.append('file', input.files[0]);
+      requestJson(API_BASE + '/config/upload-template', { method: 'POST', body: fd })
+        .then(function (data) { return createImageResourceFromFilename(data.filename); })
+        .catch(function (err) { showToast(err.message || '上传图片失败', true); })
+        .finally(function () { input.value = ''; });
+    });
+    getEl('btnCaptureImageResource').addEventListener('click', function () {
+      if (!state.config) return;
+      showToast('本窗口将最小化，请切换到目标窗口后按 Ctrl+Shift+R 开始框选');
+      if (typeof window.minimize === 'function') window.minimize();
+      else if (window.blur) window.blur();
+      requestJson(API_BASE + '/config/capture-region', { method: 'POST' })
+        .then(function (data) { return createImageResourceFromFilename(data.filename); })
+        .catch(function (err) { showToast(err.message || '截取失败', true); });
+    });
+    getEl('resourcePanelContent').addEventListener('click', function (e) {
+      var itemEl = e.target.closest('.resource-item');
+      var btn = e.target.closest('button');
+      if (!itemEl || !btn || !state.config) return;
+      var type = itemEl.getAttribute('data-res-type');
+      var id = itemEl.getAttribute('data-res-id');
+      var action = btn.getAttribute('data-action');
+      var list = type === 'controls' ? state.resources.controls : state.resources.images;
+      var resource = list.find(function (x) { return x.id === id; });
+      if (!resource) {
+        showToast('资源不存在', true);
+        return;
+      }
+      if (action === 'resource-use') applyResourceToCurrentStep(type, resource);
+      else if (action === 'resource-locate') locateResource(type, id);
+      else if (action === 'resource-rename') renameResource(type, id);
+      else if (action === 'resource-delete') deleteResource(type, id);
+    });
 
     function delegateStepList(e) {
       const item = e.target.closest('.step-item');

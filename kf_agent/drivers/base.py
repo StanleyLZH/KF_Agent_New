@@ -1,6 +1,9 @@
 """UI 驱动抽象接口：定位、点击、输入、快捷键、窗口启停。"""
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from kf_agent.core.models import ElementControl
 
 
 class UIDriver(ABC):
@@ -30,6 +33,10 @@ class UIDriver(ABC):
     def find_and_click_image(self, image_path: str, threshold: float = 0.8) -> bool:
         """图像模板匹配并点击中心，未找到返回 False。"""
         ...
+
+    def find_and_click_control(self, control: "ElementControl") -> bool:
+        """控件定位并点击（如 pywinauto）。不支持时抛出 NotImplementedError。"""
+        raise NotImplementedError("find_and_click_control not supported by this driver")
 
     @abstractmethod
     def type_text(self, text: str) -> None:

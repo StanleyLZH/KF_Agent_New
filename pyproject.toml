@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kf-agent"
-version = "0.1.20"
+version = "0.1.23"
 description = "客服软件操控服务：通过 HTTP API 控制千牛、小红书、抖音等客服软件的打开、上线与关闭，流程可配置、可可视化编辑。"
 readme = "README.md"
 license = "MIT"

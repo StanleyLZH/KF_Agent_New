@@ -79,8 +79,14 @@ def run_steps(
                     th = getattr(el.image, "threshold", 0.8) or 0.8
                     if not driver.find_and_click_image(path, threshold=th):
                         raise EngineError(f"image not found: {path}")
+                elif el.control is not None:
+                    try:
+                        if not driver.find_and_click_control(el.control):
+                            raise EngineError("control not found or click failed")
+                    except NotImplementedError:
+                        raise EngineError("control click not implemented in engine")
                 else:
-                    raise EngineError("control click not implemented in engine")
+                    raise EngineError("click step has no coord, image, or control")
             else:
                 raise EngineError("click step has no element or (x,y)")
         elif kind == "input_text":
@@ -96,6 +102,13 @@ def run_steps(
                     th = getattr(el.image, "threshold", 0.8) or 0.8
                     if not driver.find_and_click_image(path, threshold=th):
                         raise EngineError(f"input_text image not found: {path}")
+                    time.sleep(0.2)
+                elif el.control is not None:
+                    try:
+                        if not driver.find_and_click_control(el.control):
+                            raise EngineError("input_text control not found or click failed")
+                    except NotImplementedError:
+                        raise EngineError("control click not implemented in engine")
                     time.sleep(0.2)
             driver.type_text(s.text)
         elif kind == "wait":

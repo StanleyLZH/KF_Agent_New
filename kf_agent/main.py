@@ -14,7 +14,7 @@ from fastapi.openapi.docs import (
 from fastapi.staticfiles import StaticFiles
 
 from kf_agent.config import get_settings
-from kf_agent.api.routes import customer_service, config_editor, editor_tools
+from kf_agent.api.routes import customer_service, config_editor, editor_tools, resource_library
 
 logging.basicConfig(
     level=getattr(logging, get_settings().log_level.upper(), logging.INFO),
@@ -73,6 +73,7 @@ async def redoc_html():
 app.include_router(customer_service.router, prefix="/customer_service", tags=["customer_service"])
 app.include_router(config_editor.router, prefix="/config", tags=["config"])
 app.include_router(editor_tools.router, prefix="/config", tags=["config"])
+app.include_router(resource_library.router, prefix="/config", tags=["config"])
 
 
 @app.get("/editor", include_in_schema=False)

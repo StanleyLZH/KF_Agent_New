@@ -134,7 +134,7 @@ body {
 .main {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 1fr 320px;
+  grid-template-columns: 1fr 1fr 320px 340px;
   gap: 20px;
   padding: 20px;
   align-items: start;
@@ -386,6 +386,117 @@ body {
   margin: 4px 0 0 0;
   font-size: 12px;
   color: #64748b;
+}
+
+/* ----- Resource panel ----- */
+.resource-panel {
+  background: #fff;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  position: sticky;
+  top: 20px;
+}
+
+.resource-panel h3 {
+  margin: 0 0 12px 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.resource-hint {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.resource-section {
+  margin-top: 12px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 10px;
+}
+
+.resource-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.resource-section-title h4 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.resource-actions-inline {
+  display: flex;
+  gap: 6px;
+}
+
+.resource-section button,
+.resource-item-actions button,
+.resource-select-row button {
+  padding: 4px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.resource-section button:hover,
+.resource-item-actions button:hover,
+.resource-select-row button:hover {
+  background: #f8fafc;
+}
+
+.resource-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.resource-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px;
+  background: #f8fafc;
+}
+
+.resource-item-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.resource-item-sub {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 6px;
+  word-break: break-all;
+}
+
+.resource-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.resource-select-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.resource-select-row select {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 12px;
 }
 
 /* ----- Modal ----- */

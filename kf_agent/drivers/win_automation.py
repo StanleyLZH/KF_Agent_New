@@ -1,10 +1,12 @@
 """Windows UI 自动化（pywinauto）：窗口等待、关窗、可选控件点击。"""
 import logging
+import re
 import subprocess
+import sys
 import time
-from pathlib import Path
 from typing import Optional
 
+from kf_agent.core.models import ElementControl
 from kf_agent.drivers.base import UIDriver
 
 logger = logging.getLogger(__name__)
@@ -60,9 +62,9 @@ class WinAutomationDriver(UIDriver):
         while time.monotonic() < deadline:
             try:
                 if title:
-                    self._app = Application(backend="uia").connect(title_re=f".*{title}.*", timeout=1)
+                    self._app = Application(backend="uia").connect(title_re=f".*{re.escape(title)}.*", timeout=1)
                 elif class_name:
-                    self._app = Application(backend="uia").connect(class_name_re=f".*{class_name}.*", timeout=1)
+                    self._app = Application(backend="uia").connect(class_name_re=f".*{re.escape(class_name)}.*", timeout=1)
                 else:
                     return False
                 if self._app and self._app.windows():
@@ -80,6 +82,69 @@ class WinAutomationDriver(UIDriver):
 
     def find_and_click_image(self, image_path: str, threshold: float = 0.8) -> bool:
         return self._click_driver().find_and_click_image(image_path, threshold)
+
+    def find_and_click_control(self, control: ElementControl) -> bool:
+        """使用 pywinauto 查找控件并点击。需 Windows + pywinauto。"""
+        if sys.platform != "win32" or not _PYWINAUTO_AVAILABLE or Application is None:
+            return super().find_and_click_control(control)
+
+        if not control.window_title and not control.window_class:
+            logger.warning("find_and_click_control: need window_title or window_class")
+            return False
+
+        has_control_id = control.control_id is not None
+        has_auto_id = bool(control.automation_id)
+        has_control_type = bool(control.control_type)
+        has_name = bool(control.name)
+        if not (has_control_id or has_auto_id or has_control_type or has_name):
+            logger.warning("find_and_click_control: need at least one of control_id, automation_id, control_type, name")
+            return False
+
+        try:
+            app = Application(backend="uia")
+            if control.window_title:
+                app = app.connect(title_re=f".*{re.escape(control.window_title)}.*", timeout=5)
+            else:
+                app = app.connect(class_name_re=f".*{re.escape(control.window_class or '')}.*", timeout=5)
+
+            win = app.windows()[0]
+            candidates: list[dict] = []
+            if has_auto_id and has_control_id:
+                candidates.append({"auto_id": control.automation_id, "control_id": control.control_id})
+            if has_auto_id and has_name:
+                candidates.append({"auto_id": control.automation_id, "title_re": f".*{re.escape(control.name or '')}.*"})
+            if has_control_id and has_name:
+                candidates.append({"control_id": control.control_id, "title_re": f".*{re.escape(control.name or '')}.*"})
+            if has_auto_id:
+                candidates.append({"auto_id": control.automation_id})
+            if has_control_id:
+                candidates.append({"control_id": control.control_id})
+            if has_name and has_control_type:
+                candidates.append({"title_re": f".*{re.escape(control.name or '')}.*", "control_type": control.control_type})
+            if has_name:
+                candidates.append({"title_re": f".*{re.escape(control.name or '')}.*"})
+            if has_control_type:
+                candidates.append({"control_type": control.control_type})
+
+            tried = set()
+            for kwargs in candidates:
+                key = tuple(sorted(kwargs.items()))
+                if key in tried:
+                    continue
+                tried.add(key)
+                try:
+                    ctrl = win.child_window(**kwargs)
+                    ctrl.click_input()
+                    return True
+                except Exception:
+                    continue
+            return False
+        except ElementNotFoundError as e:
+            logger.warning("find_and_click_control: element not found: %s", e)
+            return False
+        except Exception as e:
+            logger.warning("find_and_click_control: %s", e)
+            return False
 
     def type_text(self, text: str) -> None:
         self._click_driver().type_text(text)
@@ -100,7 +165,7 @@ class WinAutomationDriver(UIDriver):
         if not _PYWINAUTO_AVAILABLE or Application is None or not title:
             return False
         try:
-            app = Application(backend="uia").connect(title_re=f".*{title}.*", timeout=3)
+            app = Application(backend="uia").connect(title_re=f".*{re.escape(title)}.*", timeout=3)
             for w in app.windows():
                 w.close()
                 return True

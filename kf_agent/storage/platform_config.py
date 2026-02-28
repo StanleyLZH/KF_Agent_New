@@ -69,6 +69,6 @@ def list_platform_ids(platforms_dir: Optional[Path] = None) -> list[str]:
         return []
     ids = []
     for f in root.iterdir():
-        if f.suffix.lower() == ".json" and f.stem:
+        if f.suffix.lower() == ".json" and f.stem and not f.name.endswith(".resources.json"):
             ids.append(f.stem)
     return sorted(ids)

@@ -50,6 +50,34 @@ class ElementDesc(BaseModel):
         return self.coord is not None or self.image is not None or self.control is not None
 
 
+# ---------- 资源库 ----------
+
+
+class ResourceControlItem(BaseModel):
+    """控件资源条目。"""
+    id: str
+    name: str
+    payload: ElementControl
+    created_at: str
+    updated_at: str
+
+
+class ResourceImageItem(BaseModel):
+    """图片资源条目。"""
+    id: str
+    name: str
+    payload: ElementImage
+    created_at: str
+    updated_at: str
+
+
+class ResourceLibrary(BaseModel):
+    """平台资源库：按平台管理控件与图片资源。"""
+    platform: str
+    controls: list[ResourceControlItem] = Field(default_factory=list)
+    images: list[ResourceImageItem] = Field(default_factory=list)
+
+
 # ---------- 步骤类型 ----------
 
 

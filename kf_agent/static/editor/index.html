@@ -47,6 +47,31 @@
         <h3>编辑步骤</h3>
         <div id="stepEditorContent" class="step-editor-content"></div>
       </aside>
+
+      <aside class="resource-panel" id="resourcePanel">
+        <h3>资源库</h3>
+        <p class="resource-hint" id="resourcePanelHint">请选择平台后管理资源。</p>
+        <div id="resourcePanelContent" class="hidden">
+          <section class="resource-section">
+            <div class="resource-section-title">
+              <h4>控件资源</h4>
+              <button type="button" id="btnAddControlResource">捕获并新增</button>
+            </div>
+            <div class="resource-list" id="resourceControlList"></div>
+          </section>
+          <section class="resource-section">
+            <div class="resource-section-title">
+              <h4>图片资源</h4>
+              <div class="resource-actions-inline">
+                <button type="button" id="btnUploadImageResource">上传新增</button>
+                <button type="button" id="btnCaptureImageResource">截取新增</button>
+              </div>
+            </div>
+            <input type="file" id="resourceImageFileInput" class="hidden" accept="image/*" />
+            <div class="resource-list" id="resourceImageList"></div>
+          </section>
+        </div>
+      </aside>
     </main>
 
     <div id="stepTypeModal" class="modal hidden">
